@@ -3,6 +3,40 @@ let pcaModel = null;
 
 document.getElementById('fileInput').addEventListener('change', handleFileUpload);
 
+function addRow() {
+    const newX = parseFloat(document.getElementById('newX').value);
+    const newY = parseFloat(document.getElementById('newY').value);
+    const newZ = parseFloat(document.getElementById('newZ').value);
+    const newLabel = document.getElementById('newLabel').value;
+
+    if (isNaN(newX) || isNaN(newY) || isNaN(newZ)) {
+        alert('Please enter valid numbers for X, Y, and Z');
+        return;
+    }
+
+    const newDataPoint = { x: newX, y: newY, z: newZ, label: newLabel, cluster: 'Unclassified' };
+    dataPoints.push(newDataPoint);
+    if (document.getElementById('normalizationSelect').value === 'minMax') {
+        normalizeMinMax(); // Apply Min-Max normalization
+    } else if (document.getElementById('normalizationSelect').value === 'zScore') {
+        normalizeZScore(); // Apply Z-Score normalization
+    }
+
+    const table = document.getElementById('dataTable').getElementsByTagName('tbody')[0];
+    const newRow = table.insertRow();
+    newRow.insertCell(0).textContent = newX.toFixed(4);
+    newRow.insertCell(1).textContent = newY.toFixed(4);
+    newRow.insertCell(2).textContent = newZ.toFixed(4);
+    newRow.insertCell(3).textContent = newLabel;
+
+    renderPCA();
+
+    document.getElementById('newX').value = '';
+    document.getElementById('newY').value = '';
+    document.getElementById('newZ').value = '';
+    document.getElementById('newLabel').value = '';
+}
+
 function handleFileUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -106,7 +140,6 @@ function populateTable() {
                 <td>${point.y.toFixed(4)}</td>
                 <td>${point.z.toFixed(4)}</td>
                 <td>${point.label}</td>
-                <td>Unclassified</td>
             </tr>
         `;
         tableBody.insertAdjacentHTML('beforeend', row);
@@ -162,39 +195,4 @@ function renderPCA() {
     };
 
     Plotly.newPlot('pcaPlot', [trace, ...vectors], layout);
-}
-
-function addRow() {
-    const newX = parseFloat(document.getElementById('newX').value);
-    const newY = parseFloat(document.getElementById('newY').value);
-    const newZ = parseFloat(document.getElementById('newZ').value);
-    const newLabel = document.getElementById('newLabel').value;
-
-    if (isNaN(newX) || isNaN(newY) || isNaN(newZ)) {
-        alert('Please enter valid numbers for X, Y, and Z');
-        return;
-    }
-
-    const newDataPoint = { x: newX, y: newY, z: newZ, label: newLabel, cluster: 'Unclassified' };
-    dataPoints.push(newDataPoint);
-    if (document.getElementById('normalizationSelect').value === 'minMax') {
-        normalizeMinMax(); // Apply Min-Max normalization
-    } else if (document.getElementById('normalizationSelect').value === 'zScore') {
-        normalizeZScore(); // Apply Z-Score normalization
-    }
-
-    const table = document.getElementById('dataTable').getElementsByTagName('tbody')[0];
-    const newRow = table.insertRow();
-    newRow.insertCell(0).textContent = newX.toFixed(4);
-    newRow.insertCell(1).textContent = newY.toFixed(4);
-    newRow.insertCell(2).textContent = newZ.toFixed(4);
-    newRow.insertCell(3).textContent = newLabel;
-    newRow.insertCell(4).textContent = 'Unclassified';
-
-    renderPCA();
-
-    document.getElementById('newX').value = '';
-    document.getElementById('newY').value = '';
-    document.getElementById('newZ').value = '';
-    document.getElementById('newLabel').value = '';
 }
