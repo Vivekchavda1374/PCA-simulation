@@ -1,246 +1,76 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Advanced PCA Visualization Tool</title>
-  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/simple-statistics@7.8.0/dist/simple-statistics.min.js"></script>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
-    .container { width: 90%; margin: 20px auto; background: #fff; padding: 20px; border-radius: 8px; }
-    h1, h2 { text-align: center; }
-    button, input, select { margin: 5px; padding: 6px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    table, th, td { border: 1px solid #ccc; }
-    th, td { padding: 8px; text-align: center; }
-    .stats { margin-top: 15px; }
-    .stats p { font-weight: bold; }
-    .controls { display: flex; justify-content: center; gap: 10px; margin-top: 20px; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced PCA Visualization & Analysis Tool</title>
+
+    <!-- External Libraries -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/simple-statistics@7.8.0/dist/simple-statistics.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjs@11.8.0/lib/browser/math.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ml5@0.6.0/dist/ml5.min.js"></script>
+
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <div class="container">
+      <h1>Advanced PCA Visualization & Analysis Tool</h1>
 
-<div class="container">
-  <h1>Advanced PCA Visualization & Clustering Tool</h1>
+      <!-- File Upload Section -->
+      <div class="section">
+          <h2>Data Management</h2>
+          <div class="controls">
+              <input type="file" id="fileInput" accept=".csv, .xlsx">
+              <button class="button-primary" onclick="exportData('csv')">Export CSV</button>
+              <button class="button-primary" onclick="exportData('xlsx')">Export Excel</button>
+              <select id="normalizationMethod">
+                  <option value="none">No Normalization</option>
+                  <option value="min-max">Min-Max Scaling</option>
+                  <option value="z-score">Z-Score Normalization</option>
+              </select>
+              <button class="button-secondary" onclick="normalizeData()">Normalize Data</button>
+          </div>
+      </div>
 
-  <!-- File Upload and Controls -->
-  <div>
-    <label>Upload Data: 
-      <input type="file" id="fileInput" accept=".csv, .xlsx" multiple>
-    </label>
-    <button onclick="exportData('csv')">Export to CSV</button>
-    <button onclick="exportData('excel')">Export to Excel</button>
-    <button onclick="applyKMeans()">Apply K-Means Clustering</button>
-  </div>
-
-  <!-- Add New Row Controls -->
-  <div class="controls">
-    <input type="number" id="newX" placeholder="Enter X value">
-    <input type="number" id="newY" placeholder="Enter Y value">
-    <input type="number" id="newZ" placeholder="Enter Z value">
-    <input type="text" id="newLabel" placeholder="Enter Label">
-    <button onclick="addRow()">Add Row</button>
-  </div>
-
-  <!-- Data Table -->
-  <h2>Data Table</h2>
-  <table id="dataTable">
-    <thead>
-      <tr>
-        <th>X</th><th>Y</th><th>Z</th><th>Label</th><th>Actions</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-
-  <!-- Visualization -->
-  <h2>Visualization</h2>
-  <div id="pcaPlot" style="height: 500px;"></div>
-
-  <!-- Scree Plot -->
-  <h2>Scree Plot</h2>
-  <div id="screePlot" style="height: 500px;"></div>
-
-  <!-- Data Summary -->
-  <h2>Data Summary</h2>
-  <div class="stats">
-    <p id="mean">Mean: </p>
-    <p id="variance">Variance: </p>
-    <p id="stdDev">Standard Deviation: </p>
-  </div>
+      <!-- Add Data Section -->
+      <div class="section">
+          <h2>Add New Data Point</h2>
+          <div class="controls">
+              <input type="number" id="newX" placeholder="X Value" step="0.01">
+              <input type="number" id="newY" placeholder="Y Value" step="0.01">
+              <input type="number" id="newZ" placeholder="Z Value" step="0.01">
+              <input type="text" id="newLabel" placeholder="Label">
+              <button class="button-primary" onclick="addRow()">Add Row</button>
+          </div>
+      </div>
+      <div class="section">
+        <h2>Data Table</h2>
+        <table id="dataTable">
+            <thead>
+                <tr>
+                    <th>X</th><th>Y</th><th>Z</th><th>Label</th><th>Cluster</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
 </div>
 
-<script>
-  let dataPoints = [];
-  let clusters = [];
+      <!-- Visualization Section -->
+      <div class="section">
+          <h2>3D PCA Visualization</h2>
+          <div id="pcaPlot" class="plot-container"></div>
+      </div>
 
-  // Initialize with Dummy Data
-  function initializeData() {
-    dataPoints = [
-      { x: 1, y: 2, z: 3, label: 'A' },
-      { x: 2, y: 3, z: 4, label: 'B' },
-      { x: 4, y: 5, z: 6, label: 'C' },
-    ];
-    renderTable();
-    plotData();
-    calculateStats();
-    plotScree();
-  }
+      <!-- Data Table Section -->
 
-  // Add Row
-  function addRow() {
-    const newX = document.getElementById('newX').value;
-    const newY = document.getElementById('newY').value;
-    const newZ = document.getElementById('newZ').value;
-    const newLabel = document.getElementById('newLabel').value || 'N/A';
 
-    if (newX && newY && newZ) {
-      dataPoints.push({ x: parseFloat(newX), y: parseFloat(newY), z: parseFloat(newZ), label: newLabel });
-      renderTable();
-      plotData();
-      calculateStats();
-    } else {
-      alert('Please fill all X, Y, Z values.');
-    }
-  }
-
-  // Delete Row
-  function deleteRow(index) {
-    dataPoints.splice(index, 1);
-    renderTable();
-    plotData();
-    calculateStats();
-  }
-
-  // Edit Table Cell
-  function editCell(index, key, value) {
-    dataPoints[index][key] = parseFloat(value) || 0;
-    plotData();
-    calculateStats();
-  }
-
-  // Render Table
-  function renderTable() {
-    const tbody = document.querySelector('#dataTable tbody');
-    tbody.innerHTML = '';
-    dataPoints.forEach((row, index) => {
-      tbody.innerHTML += `
-        <tr>
-          <td contenteditable="true" oninput="editCell(${index}, 'x', this.innerText)">${row.x}</td>
-          <td contenteditable="true" oninput="editCell(${index}, 'y', this.innerText)">${row.y}</td>
-          <td contenteditable="true" oninput="editCell(${index}, 'z', this.innerText)">${row.z}</td>
-          <td>${row.label}</td>
-          <td><button onclick="deleteRow(${index})">Delete</button></td>
-        </tr>
-      `;
-    });
-  }
-
-  // Visualization Plot
-  function plotData() {
-    const x = dataPoints.map(d => d.x);
-    const y = dataPoints.map(d => d.y);
-    const z = dataPoints.map(d => d.z);
-    const labels = dataPoints.map(d => d.label);
-    const trace = {
-      x, y, z, text: labels,
-      mode: 'markers',
-      marker: { size: 10, color: 'blue', opacity: 0.8 },
-      type: 'scatter3d'
-    };
-
-    const layout = { title: '3D PCA Visualization', margin: { l: 0, r: 0, b: 0, t: 0 } };
-    Plotly.newPlot('pcaPlot', [trace], layout);
-  }
-
-  // Calculate Statistics
-  function calculateStats() {
-    const x = dataPoints.map(d => d.x);
-    const mean = simpleStatistics.mean(x);
-    const variance = simpleStatistics.variance(x);
-    const stdDev = simpleStatistics.standardDeviation(x);
-
-    document.getElementById('mean').innerText = `Mean: ${mean.toFixed(2)}`;
-    document.getElementById('variance').innerText = `Variance: ${variance.toFixed(2)}`;
-    document.getElementById('stdDev').innerText = `Standard Deviation: ${stdDev.toFixed(2)}`;
-  }
-
-  // File Upload Handling
-  document.getElementById('fileInput').addEventListener('change', (e) => {
-    const files = e.target.files;
-    for (let file of files) {
-      if (file.name.endsWith('.csv')) {
-        Papa.parse(file, {
-          header: true,
-          complete: function(results) {
-            dataPoints.push(...results.data.map(d => ({ x: +d.X, y: +d.Y, z: +d.Z, label: d.Label || 'N/A' })));
-            renderTable();
-            plotData();
-            calculateStats();
-            plotScree();
-          }
-        });
-      } else if (file.name.endsWith('.xlsx')) {
-        const reader = new FileReader();
-        reader.onload = function(event) {
-          const data = new Uint8Array(event.target.result);
-          const workbook = XLSX.read(data, { type: 'array' });
-          const sheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[sheetName];
-          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-          dataPoints.push(...jsonData.slice(1).map(d => ({ x: d[0], y: d[1], z: d[2], label: d[3] || 'N/A' })));
-          renderTable();
-          plotData();
-          calculateStats();
-          plotScree();
-        };
-        reader.readAsArrayBuffer(file);
-      }
-    }
-  });
-
-  // Export Data
-  function exportData(type) {
-    let data = 'X,Y,Z,Label\n';
-    dataPoints.forEach(row => {
-      data += `${row.x},${row.y},${row.z},${row.label}\n`;
-    });
-    
-    const blob = new Blob([data], { type: `text/${type};charset=utf-8;` });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `data.${type}`;
-    a.click();
-  }
-
-  // Apply K-Means Clustering
-  function applyKMeans() {
-    // Dummy clustering logic - replace with actual K-means clustering algorithm
-    clusters = dataPoints.map(d => ({ ...d, cluster: Math.floor(Math.random() * 3) + 1 }));
-    plotData();
-  }
-
-  // Scree Plot
-  function plotScree() {
-    const variance = simpleStatistics.variance(dataPoints.map(d => d.x));
-    const trace1 = {
-      x: ['PC1', 'PC2', 'PC3'],
-      y: [variance, variance * 0.8, variance * 0.6],
-      type: 'bar',
-      name: 'Variance Explained'
-    };
-
-    const layout = { title: 'Scree Plot', margin: { l: 0, r: 0, b: 0, t: 0 } };
-    Plotly.newPlot('screePlot', [trace1], layout);
-  }
-
-  // Initialize with sample data
-  initializeData();
-</script>
-
+  <!-- Custom JavaScript -->
+  <script src="script.js"></script>
 </body>
 </html>
